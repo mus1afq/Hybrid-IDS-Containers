@@ -1,0 +1,13 @@
+NETWORK MODEL EVALUATION
+Dataset: botiot_synthetic_test_1000.csv
+Model: best_network_model.pkl
+Threshold: 0.5
+
+Accuracy: 0.913000
+Precision: 0.915493
+Recall: 0.910000
+F1: 0.912738
+ROC-AUC: 0.972244
+
+TN=458 FP=42 FN=45 TP=455
+FPR=0.084000 FNR=0.090000

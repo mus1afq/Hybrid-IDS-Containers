@@ -1,0 +1,7 @@
+file,label,pred,p_sys
+benign_idle.log,0,0,6.10492357673252e-05
+benign_loop.log,0,1,1.0
+benign_proc.log,0,0,0.0017663364950370089
+mal_file.log,1,0,0.003727038425286983
+mal_proc.log,1,1,1.0
+mal_rename.log,1,1,1.0

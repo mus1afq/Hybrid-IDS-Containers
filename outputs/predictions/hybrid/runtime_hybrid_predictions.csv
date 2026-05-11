@@ -1,0 +1,7 @@
+base,network_base,label,p_sys,p_net,pred_syscall,pred_network,pred_hybrid
+benign_proc,benign_web,0,0.001766336495037,0.03,0,0,0
+benign_idle,benign_ping,0,6.10492357673252e-05,0.125,0,0,0
+benign_loop,benign_nginx,0,1.0,0.24,1,0,1
+mal_file,mal_flood,1,0.0037270384252869,0.23,0,0,0
+mal_proc,mal_conn,1,1.0,0.235,1,0,1
+mal_rename,mal_scan,1,1.0,0.02,1,0,1

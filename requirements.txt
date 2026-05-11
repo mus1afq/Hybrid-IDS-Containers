@@ -1,0 +1,23 @@
+# Requirements — Hybrid IDS FYP
+# Run from the project root: pip install -r requirements.txt
+
+# Core packages (required to run all validation tests and evaluation scripts) 
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+joblib
+
+# Optional: additional classifiers used during training comparison 
+# Only needed if re-running train_syscall_model.py with the full classifier sweep.
+xgboost
+lightgbm
+
+# Optional: live runtime capture 
+# Only needed if re-running src/hybrid/runtime/run_and_capture.sh and
+# src/hybrid/runtime/extract_network_features.py.
+# Requires system-level tools, not pip packages:
+#   Docker Desktop  — https://www.docker.com/products/docker-desktop
+#   tshark          — brew install wireshark (macOS) / sudo apt-get install tshark (Linux) / https://www.wireshark.org/download.html (windows)
+#   sysdig          — via docker/sysdig image  (used inside run_and_capture.sh)
