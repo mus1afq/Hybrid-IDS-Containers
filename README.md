@@ -6,8 +6,6 @@
 ![Docker](https://img.shields.io/badge/Docker-required-2496ED?logo=docker&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4-F7931E?logo=scikit-learn&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/status-final--year--project-blue)
-![Grade](https://img.shields.io/badge/grade-First%20Class-success)
 
 ---
 
