@@ -13,14 +13,28 @@
 
 A two-model pipeline that watches Docker containers at runtime, classifies behaviour from syscall traces and network flows independently, and fuses the two probability streams through a deterministic rule. Built and evaluated as the final-year artefact for a BSc Cybersecurity dissertation at Birmingham City University, awarded a First Class grade.
 
-| Metric | Syscall-Only | Network-Only | **Hybrid** |
-| --- | --- | --- | --- |
-| F1 (synthetic, n=580) | 0.719 | 0.841 | **0.898** |
-| Recall | 0.561 | 0.726 | **0.815** |
-| FPR | 0.000 | 0.000 | **0.000** |
-| Runtime accuracy (6 live containers) | — | — | **0.667** |
+| Metric                                          | Syscall-Only | Network-Only | **Hybrid** |
+| ----------------------------------------------- | ------------ | ------------ | ---------- |
+| F1 (synthetic fusion-rule validation, n=580)    | 0.719        | 0.841        | **0.898**  |
+| Recall (synthetic)                              | 0.561        | 0.726        | **0.815**  |
+| FPR (synthetic, curated set)                    | 0.000        | 0.000        | **0.000**  |
+| Runtime accuracy (6-container live demo)        | —            | —            | **0.667**  |
 
-Peak synthetic F1 of **0.957** at a 15-second detection window. Runtime performance dropped under distribution shift, which is discussed honestly in the Limitations section below.
+Peak synthetic F1 of **0.957** at a 15-second detection window. Runtime performance dropped under distribution shift; this is discussed openly in the Limitations section and in [`docs/evaluation-tiers.md`](docs/evaluation-tiers.md).
+
+---
+
+## Evaluation regimes
+
+This project reports results from three distinct evaluation regimes. They are not interchangeable, and the README headline numbers carry a regime label for that reason. The full breakdown lives in [`docs/evaluation-tiers.md`](docs/evaluation-tiers.md); the summary is:
+
+| Regime                                | What it measures                                              | Status              |
+| ------------------------------------- | ------------------------------------------------------------- | ------------------- |
+| **Synthetic fusion-rule validation**  | Whether the deterministic rule beats either single modality on a curated paired set (n=580). | Implemented and reported. |
+| **Live runtime demo evaluation**      | Whether the end-to-end pipeline produces sensible verdicts on six prepared Docker scenarios. | Implemented and reported. |
+| **Production evaluation**             | Generalisation to real workloads with realistic class imbalance, drift, and tens of thousands of samples. | **Future work**, not implemented. |
+
+Treat the 0.898 F1 figure as a fusion-rule validation result, not a deployment claim. Treat the 0.000 FPR as a property of a balanced curated set, not a real-world guarantee.
 
 ---
 
@@ -67,22 +81,24 @@ The deliverable is a working pipeline that captures both telemetry streams from 
                          Benign / Malicious
 ```
 
-A Mermaid version of this diagram lives in [`docs/architecture.md`](docs/architecture.md).
+A Mermaid version and component-by-component breakdown live in [`docs/architecture.md`](docs/architecture.md).
+
+Every artefact produced by a single capture run carries a shared `run_id` so the syscall and network sides can be paired deterministically downstream. See [`src/common/run_id.py`](src/common/run_id.py) for the helper module.
 
 ---
 
 ## Results
 
-### Synthetic evaluation (n = 580)
+### Synthetic fusion-rule validation (n = 580)
 
 Confusion matrix for the hybrid model:
 
-|  | Predicted Benign | Predicted Malicious |
-| --- | --- | --- |
-| **Actual Benign (120)** | 120 | 0 |
-| **Actual Malicious (460)** | 85 | 375 |
+|                            | Predicted Benign | Predicted Malicious |
+| -------------------------- | ---------------- | ------------------- |
+| **Actual Benign (120)**    | 120              | 0                   |
+| **Actual Malicious (460)** | 85               | 375                 |
 
-Zero false positives is a property of the synthetic paired set rather than a real-world guarantee. The set is balanced and curated; production noise would change this. Treat the FPR figure as a controlled-conditions ceiling.
+Zero false positives is a property of this synthetic paired set rather than a real-world guarantee. The set is balanced and curated; production noise would change this. Treat the FPR figure as a controlled-conditions ceiling.
 
 ![Confusion matrix](outputs/plots/hybrid_confusion_matrix.png)
 ![ROC curves](outputs/plots/roc_comparison.png)
@@ -93,16 +109,16 @@ The detection window N is the number of seconds of telemetry aggregated before a
 
 ![N-window curve](outputs/plots/n_window_f1.png)
 
-### Runtime evaluation (6 Docker containers)
+### Live runtime demo (6 Docker containers)
 
-| Scenario | True label | Hybrid verdict | Notes |
-| --- | --- | --- | --- |
-| 1 | Benign workload (nginx) | Benign | clean |
-| 2 | Benign workload (python REST API) | Benign | clean |
-| 3 | Reverse shell | Malicious | syscall-led |
-| 4 | Cryptominer | Malicious | network-led |
-| 5 | Privilege escalation attempt | Benign (FN) | distribution shift |
-| 6 | Data exfiltration | Benign (FN) | distribution shift |
+| Scenario | True label                        | Hybrid verdict | Notes              |
+| -------- | --------------------------------- | -------------- | ------------------ |
+| 1        | Benign workload (nginx)           | Benign         | clean              |
+| 2        | Benign workload (python REST API) | Benign         | clean              |
+| 3        | Reverse shell                     | Malicious      | syscall-led        |
+| 4        | Cryptominer                       | Malicious      | network-led        |
+| 5        | Privilege escalation attempt      | Benign (FN)    | distribution shift |
+| 6        | Data exfiltration                 | Benign (FN)    | distribution shift |
 
 Runtime accuracy was **4/6 = 66.7%**. The drop from synthetic to runtime is the most interesting finding in the project, not the headline F1 number. It demonstrates how brittle ML-based IDS becomes when training data does not match deployment conditions. See the dissertation for full analysis.
 
@@ -116,7 +132,7 @@ The fusion layer is a deterministic rule rather than a learned meta-classifier. 
 def hybrid_decision(p_sys: float, p_net: float) -> str:
     if p_sys >= 0.60:                       # syscall model highly confident
         return "MALICIOUS"
-    if p_net >= 0.50 and p_sys >= 0.10:    # network flags + syscall suspicion floor
+    if p_net >= 0.50 and p_sys >= 0.10:     # network flags + syscall suspicion floor
         return "MALICIOUS"
     return "BENIGN"
 ```
@@ -132,21 +148,31 @@ The thresholds were tuned on a validation split with the goal of preserving zero
 ├── data/
 │   ├── raw/                    # CHIDS + Bot-IoT source datasets
 │   └── runtime/                # sysdig + tshark captures from live containers
+├── docs/
+│   ├── architecture.md         # Mermaid pipeline diagram + component map
+│   └── evaluation-tiers.md     # Synthetic vs runtime vs production evaluation
 ├── models/
 │   ├── syscall/                # Logistic Regression + scaler
 │   └── network/                # Random Forest
 ├── src/
-│   ├── common/config.py        # Single source of truth for paths
+│   ├── common/
+│   │   ├── config.py           # Single source of truth for paths
+│   │   └── run_id.py           # Shared run_id helpers for capture pairing
 │   ├── syscall/                # training / inference / evaluation
 │   ├── network/                # training / inference / evaluation
 │   └── hybrid/                 # fusion / evaluation / runtime capture
-├── tests/                      # End-to-end validation suite
+├── tests/                      # End-to-end validation suite + unit tests
 ├── demo/                       # Four prepared runtime scenarios (see below)
 ├── outputs/
 │   ├── predictions/            # Per-model and hybrid prediction CSVs
 │   ├── metrics/                # Evaluation tables
 │   └── plots/                  # Confusion matrices, ROC curves, N-window plot
-├── requirements.txt
+├── .github/workflows/ci.yml    # Lightweight CI running the validation suite
+├── requirements.txt            # Core runtime dependencies
+├── requirements-dev.txt        # pytest only — used by CI
+├── requirements-extras-training.txt   # xgboost, lightgbm (training only)
+├── CHANGELOG.md
+├── LICENSE                     # MIT
 └── README.md
 ```
 
@@ -155,29 +181,49 @@ The thresholds were tuned on a validation split with the goal of preserving zero
 ## Quick start
 
 ```bash
-# 1. Clone and install
+# 1. Clone and install core dependencies
 git clone https://github.com/mus1afq/Hybrid-IDS-Containers.git
 cd Hybrid-IDS-Containers
 pip install -r requirements.txt
 
-# 2. Reproduce the headline metrics on the bundled synthetic set
+# 2. Reproduce the headline synthetic metrics
 python3 src/hybrid/evaluation/evaluate_hybrid_synthetic.py
 
-# 3. Full end-to-end validation
+# 3. Full validation suite
+pip install -r requirements-dev.txt
 bash tests/run_all_tests.sh
 ```
 
 For the live capture pipeline (requires `docker`, `sysdig`, `tshark`):
 
 ```bash
+# Step 1: capture syscalls + packets and emit a run_id
 bash src/hybrid/runtime/run_and_capture.sh
+
+# Step 2: extract features. The syscall extractor refuses to produce output
+# silently from synthetic profiles. To run a demo without a live capture, pass
+# the explicit flag below; the output will be marked SYNTHETIC.
 python3 src/hybrid/runtime/extract_syscall_features.py
 python3 src/hybrid/runtime/extract_network_features.py
+
+# Step 3: align schemas
 python3 src/hybrid/runtime/align_network_schema.py
+
+# Step 4: inference
 python3 src/syscall/inference/run_syscall_inference.py
 python3 src/network/inference/run_network_inference.py
+
+# Step 5: fuse predictions by run_id and evaluate
 python3 src/hybrid/fusion/run_hybrid_fusion.py
 python3 src/hybrid/evaluation/evaluate_hybrid_runtime.py
+```
+
+### Demo-without-live-capture (synthetic fallback, explicit opt-in)
+
+If `docker`, `sysdig`, or `tshark` are unavailable and you only want to walk the pipeline visually, the syscall extractor accepts `--allow-synthetic-fallback`. The output will be loudly labelled as synthetic and must not be reported as a successful live capture:
+
+```bash
+python3 src/hybrid/runtime/extract_syscall_features.py --allow-synthetic-fallback
 ```
 
 ---
@@ -186,12 +232,12 @@ python3 src/hybrid/evaluation/evaluate_hybrid_runtime.py
 
 The `demo/` directory contains four prepared scenarios used during the viva. Each one launches a Docker workload, runs capture, and produces a verdict.
 
-| Scenario | Workload | Expected verdict |
-| --- | --- | --- |
-| `01_benign_webserver` | nginx serving static content | Benign |
-| `02_reverse_shell` | bash reverse shell from a compromised container | Malicious |
-| `03_cryptominer` | XMRig running against a public pool | Malicious |
-| `04_exfiltration` | curl-based data exfiltration over HTTPS | Malicious |
+| Scenario              | Workload                                        | Expected verdict |
+| --------------------- | ----------------------------------------------- | ---------------- |
+| `01_benign_webserver` | nginx serving static content                    | Benign           |
+| `02_reverse_shell`    | bash reverse shell from a compromised container | Malicious        |
+| `03_cryptominer`      | XMRig running against a public pool             | Malicious        |
+| `04_exfiltration`     | curl-based data exfiltration over HTTPS         | Malicious        |
 
 Run any scenario with:
 
@@ -210,6 +256,8 @@ A short record of the calls made during the build and the reasoning behind them.
 - **Deterministic fusion, not a meta-classifier.** Stacking a third model on top of two probability streams adds opacity and risks overfitting the validation set. A two-line rule is auditable and behaves predictably under partial input.
 - **sysdig over Falco.** Falco is a higher-level abstraction on top of similar kernel hooks. sysdig gave direct event traces, which were easier to align with the CHIDS schema.
 - **Late fusion, not early fusion.** Concatenating raw features from two domains would have required a unified schema and a single model. Late fusion lets each modality use its own representation and classifier.
+- **Explicit synthetic-fallback flag.** The runtime extractor refuses to fabricate features silently. If the live capture file is missing or empty, the script exits non-zero unless `--allow-synthetic-fallback` is explicitly passed. This makes it impossible for a demo run to be mistaken for a live capture in the project artefacts.
+- **`run_id`-based pairing.** Syscall and network captures are paired by a shared `run_id` written into every feature and prediction CSV, not by row position. The fusion stage refuses to operate on disjoint or unlabelled inputs.
 
 ---
 
@@ -229,31 +277,29 @@ Written before viva. The grader picked up most of these.
 
 The repository has a single commit because the dissertation submission process required a clean upload. The work itself ran across the full final year. Phases below.
 
-| Phase | Period | Milestones |
-| --- | --- | --- |
-| Scoping | Sep–Oct 2025 | Problem definition, supervisor sign-off, dataset selection (CHIDS, Bot-IoT) |
-| Data pipeline | Oct–Nov 2025 | Preprocessing, schema alignment scripts, feature extraction modules |
-| Modelling | Nov 2025–Jan 2026 | Syscall LR classifier, network RF classifier, single-modality baselines |
-| Fusion | Feb 2026 | Late-fusion rule design, threshold tuning, synthetic evaluation |
-| Runtime capture | Feb–Mar 2026 | sysdig + tshark Docker pipeline, demo scenario builds |
-| Evaluation | Mar–Apr 2026 | N-window analysis, runtime experiments, distribution-shift investigation |
-| Write-up | Apr–May 2026 | Dissertation drafting, results consolidation, plot generation |
-| Submission and viva | May–Jun 2026 | Final submission, viva preparation, repository finalisation |
+| Phase               | Period            | Milestones                                                                  |
+| ------------------- | ----------------- | --------------------------------------------------------------------------- |
+| Scoping             | Sep–Oct 2025      | Problem definition, supervisor sign-off, dataset selection (CHIDS, Bot-IoT) |
+| Data pipeline       | Oct–Nov 2025      | Preprocessing, schema alignment scripts, feature extraction modules         |
+| Modelling           | Nov 2025–Jan 2026 | Syscall LR classifier, network RF classifier, single-modality baselines     |
+| Fusion              | Feb 2026          | Late-fusion rule design, threshold tuning, synthetic evaluation             |
+| Runtime capture     | Feb–Mar 2026      | sysdig + tshark Docker pipeline, demo scenario builds                       |
+| Evaluation          | Mar–Apr 2026      | N-window analysis, runtime experiments, distribution-shift investigation    |
+| Write-up            | Apr–May 2026      | Dissertation drafting, results consolidation, plot generation               |
+| Submission and viva | May–Jun 2026      | Final submission, viva preparation, repository finalisation                 |
 
-A more granular CHANGELOG covering individual scripts and decisions lives in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## Tech stack
 
-| Layer | Tools |
-| --- | --- |
-| Runtime capture | Docker, sysdig (eBPF), tshark |
-| Feature engineering | Python, pandas, NumPy |
-| Modelling | scikit-learn (Logistic Regression, Random Forest), joblib |
-| Evaluation | matplotlib, seaborn |
-| Datasets | CHIDS (syscalls), Bot-IoT (network flows) |
-| Orchestration | bash, GitHub Actions (CI) |
+| Layer               | Tools                                                     |
+| ------------------- | --------------------------------------------------------- |
+| Runtime capture     | Docker, sysdig (eBPF), tshark                             |
+| Feature engineering | Python, pandas, NumPy                                     |
+| Modelling           | scikit-learn (Logistic Regression, Random Forest), joblib |
+| Evaluation          | matplotlib, seaborn                                       |
+| Datasets            | CHIDS (syscalls), Bot-IoT (network flows)                 |
 
 ---
 
@@ -261,7 +307,7 @@ A more granular CHANGELOG covering individual scripts and decisions lives in [`C
 
 Listed plainly because the project should not be read as production-ready.
 
-- The synthetic FPR of 0.000 is a property of the evaluation set, not a generalisable claim.
+- The synthetic FPR of 0.000 is a property of the curated evaluation set, not a generalisable claim.
 - Runtime evaluation covered six scenarios. Two missed detections under distribution shift dropped accuracy to 66.7%.
 - Both training datasets are static, dated, and do not reflect modern attacker behaviour against containerised microservices.
 - The fusion thresholds were tuned by hand on a single validation split.
@@ -273,8 +319,8 @@ Listed plainly because the project should not be read as production-ready.
 
 - CHIDS Dataset — Container Host Intrusion Detection System dataset, used for syscall model training.
 - Bot-IoT Dataset — Koroniotis et al., 2019, used for network model training.
-- sysdig — runtime syscall capture (https://github.com/draios/sysdig).
-- tshark — packet capture and analysis (https://www.wireshark.org/).
+- sysdig — runtime syscall capture (<https://github.com/draios/sysdig>).
+- tshark — packet capture and analysis (<https://www.wireshark.org/>).
 
 Full reference list in the dissertation appendix.
 
@@ -284,8 +330,8 @@ Full reference list in the dissertation appendix.
 
 **Mustafa Sheikh** (`mshk`) — BSc (Hons) Cybersecurity, First Class, Birmingham City University, 2026.
 
-- Portfolio: [mustafaashk.com](https://mustafashk.com)
-- Email: [Mustafaashk@yahoo.com](mailto:Mustafaashk@yahoo.com)
+- Portfolio: [mustafashk.com](https://mustafaashk.com)
+- Email: <Mustafaashk@yahoo.com>
 - GitHub: [@mus1afq](https://github.com/mus1afq)
 - LinkedIn: [Mustafa Sheikh](https://uk.linkedin.com/in/mustafa-sheikh-357715341)
 
