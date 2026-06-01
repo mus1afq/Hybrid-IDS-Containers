@@ -1,23 +1,31 @@
-# Requirements — Hybrid IDS FYP
-# Run from the project root: pip install -r requirements.txt
+# Hybrid IDS FYP — core runtime dependencies.
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# Pins use compatible-release operators (~=) to allow patch updates while
+# keeping the major and minor lines stable. The pins were chosen to match the
+# versions that the dissertation evaluation was run against and are known to
+# work together.
+#
+# Optional extras are intentionally kept out of this file. See:
+#   requirements-dev.txt              -> pytest, lint tooling (used by CI)
+#   requirements-extras-training.txt  -> xgboost, lightgbm (model sweep only)
+#
+# System-level tools used by the live capture pipeline are not pip packages.
+# Install them from the OS package manager:
+#   - Docker Desktop  https://www.docker.com/products/docker-desktop
+#   - tshark          apt-get install tshark / brew install wireshark
+#   - sysdig          via the docker/sysdig image; see run_and_capture.sh
 
-# Core packages (required to run all validation tests and evaluation scripts) 
-pandas
-numpy
-scikit-learn
-matplotlib
-seaborn
-joblib
+# ---- Data and numerics ----
+numpy~=1.26
+pandas~=2.2
 
-# Optional: additional classifiers used during training comparison 
-# Only needed if re-running train_syscall_model.py with the full classifier sweep.
-xgboost
-lightgbm
+# ---- Modelling ----
+scikit-learn~=1.4
+joblib~=1.4
 
-# Optional: live runtime capture 
-# Only needed if re-running src/hybrid/runtime/run_and_capture.sh and
-# src/hybrid/runtime/extract_network_features.py.
-# Requires system-level tools, not pip packages:
-#   Docker Desktop  — https://www.docker.com/products/docker-desktop
-#   tshark          — brew install wireshark (macOS) / sudo apt-get install tshark (Linux) / https://www.wireshark.org/download.html (windows)
-#   sysdig          — via docker/sysdig image  (used inside run_and_capture.sh)
+# ---- Plot generation for the dissertation figures ----
+matplotlib~=3.8
+seaborn~=0.13
