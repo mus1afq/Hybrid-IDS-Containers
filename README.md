@@ -20,13 +20,14 @@ A two-model pipeline that watches Docker containers at runtime, classifies behav
 | FPR (synthetic, curated set)                    | 0.000        | 0.000        | **0.000**  |
 | Runtime accuracy (6-container live demo)        | —            | —            | **0.667**  |
 
-Peak synthetic F1 of **0.957** at a 15-second detection window. Runtime performance dropped under distribution shift; this is discussed openly in the Limitations section and in [`docs/evaluation-tiers.md`](docs/evaluation-tiers.md).
+Peak synthetic F1 of **0.957** at a 15-second detection window. Runtime performance dropped under distribution shift; this is discussed openly in the limitations.
 
 ---
 
 ## Evaluation regimes
 
-This project reports results from three distinct evaluation regimes. They are not interchangeable, and the README headline numbers carry a regime label for that reason. The full breakdown lives in [`docs/evaluation-tiers.md`](docs/evaluation-tiers.md); the summary is:
+This project reports results from three distinct evaluation regimes. They are not interchangeable, and the README headline numbers carry a regime label for that reason.
+Summary:
 
 | Regime                                | What it measures                                              | Status              |
 | ------------------------------------- | ------------------------------------------------------------- | ------------------- |
@@ -50,7 +51,7 @@ The deliverable is a working pipeline that captures both telemetry streams from 
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                       Docker Container Workload                       │
+│                       Docker Container Workload                      │
 └──────────────────────┬─────────────────────────┬─────────────────────┘
                        │                         │
               syscalls │                         │ network traffic
@@ -80,10 +81,6 @@ The deliverable is a working pipeline that captures both telemetry streams from 
                                ▼
                          Benign / Malicious
 ```
-
-A Mermaid version and component-by-component breakdown live in [`docs/architecture.md`](docs/architecture.md).
-
-Every artefact produced by a single capture run carries a shared `run_id` so the syscall and network sides can be paired deterministically downstream. See [`src/common/run_id.py`](src/common/run_id.py) for the helper module.
 
 ---
 
@@ -279,9 +276,9 @@ The repository has a single commit because the dissertation submission process r
 
 | Phase               | Period            | Milestones                                                                  |
 | ------------------- | ----------------- | --------------------------------------------------------------------------- |
-| Scoping             | Sep–Oct 2025      | Problem definition, supervisor sign-off, dataset selection (CHIDS, Bot-IoT) |
-| Data pipeline       | Oct–Nov 2025      | Preprocessing, schema alignment scripts, feature extraction modules         |
-| Modelling           | Nov 2025–Jan 2026 | Syscall LR classifier, network RF classifier, single-modality baselines     |
+| Scoping             | Sep - Oct 2025      | Problem definition, supervisor sign-off, dataset selection (CHIDS, Bot-IoT) |
+| Data pipeline       | Oct – Nov 2025      | Preprocessing, schema alignment scripts, feature extraction modules         |
+| Modelling           | Nov 2025 – Jan 2026 | Syscall LR classifier, network RF classifier, single-modality baselines     |
 | Fusion              | Feb 2026          | Late-fusion rule design, threshold tuning, synthetic evaluation             |
 | Runtime capture     | Feb–Mar 2026      | sysdig + tshark Docker pipeline, demo scenario builds                       |
 | Evaluation          | Mar–Apr 2026      | N-window analysis, runtime experiments, distribution-shift investigation    |
@@ -332,10 +329,7 @@ Full reference list in the dissertation appendix.
 
 - Portfolio: [mustafashk.com](https://mustafaashk.com)
 - Email: <Mustafaashk@yahoo.com>
-- GitHub: [@mus1afq](https://github.com/mus1afq)
 - LinkedIn: [Mustafa Sheikh](https://uk.linkedin.com/in/mustafa-sheikh-357715341)
-
-Open to graduate roles in penetration testing, SOC analysis, cloud security, application security, and product engineering. Get in touch.
 
 ---
 
