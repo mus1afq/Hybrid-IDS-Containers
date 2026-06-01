@@ -145,16 +145,11 @@ The thresholds were tuned on a validation split with the goal of preserving zero
 ├── data/
 │   ├── raw/                    # CHIDS + Bot-IoT source datasets
 │   └── runtime/                # sysdig + tshark captures from live containers
-├── docs/
-│   ├── architecture.md         # Mermaid pipeline diagram + component map
-│   └── evaluation-tiers.md     # Synthetic vs runtime vs production evaluation
 ├── models/
 │   ├── syscall/                # Logistic Regression + scaler
 │   └── network/                # Random Forest
 ├── src/
-│   ├── common/
-│   │   ├── config.py           # Single source of truth for paths
-│   │   └── run_id.py           # Shared run_id helpers for capture pairing
+│   ├── common/                 # shared config and helpers
 │   ├── syscall/                # training / inference / evaluation
 │   ├── network/                # training / inference / evaluation
 │   └── hybrid/                 # fusion / evaluation / runtime capture
@@ -164,11 +159,8 @@ The thresholds were tuned on a validation split with the goal of preserving zero
 │   ├── predictions/            # Per-model and hybrid prediction CSVs
 │   ├── metrics/                # Evaluation tables
 │   └── plots/                  # Confusion matrices, ROC curves, N-window plot
-├── .github/workflows/ci.yml    # Lightweight CI running the validation suite
-├── requirements.txt            # Core runtime dependencies
-├── requirements-dev.txt        # pytest only — used by CI
-├── requirements-extras-training.txt   # xgboost, lightgbm (training only)
-├── CHANGELOG.md
+├── requirements.txt            # Core dependencies
+├── changelog.md
 ├── LICENSE                     # MIT
 └── README.md
 ```
@@ -187,7 +179,6 @@ pip install -r requirements.txt
 python3 src/hybrid/evaluation/evaluate_hybrid_synthetic.py
 
 # 3. Full validation suite
-pip install -r requirements-dev.txt
 bash tests/run_all_tests.sh
 ```
 
@@ -225,39 +216,6 @@ python3 src/hybrid/runtime/extract_syscall_features.py --allow-synthetic-fallbac
 
 ---
 
-## Demo scenarios
-
-The `demo/` directory contains four prepared scenarios used during the viva. Each one launches a Docker workload, runs capture, and produces a verdict.
-
-| Scenario              | Workload                                        | Expected verdict |
-| --------------------- | ----------------------------------------------- | ---------------- |
-| `01_benign_webserver` | nginx serving static content                    | Benign           |
-| `02_reverse_shell`    | bash reverse shell from a compromised container | Malicious        |
-| `03_cryptominer`      | XMRig running against a public pool             | Malicious        |
-| `04_exfiltration`     | curl-based data exfiltration over HTTPS         | Malicious        |
-
-Run any scenario with:
-
-```bash
-bash demo/<scenario>/run.sh
-```
-
----
-
-## Design decisions
-
-A short record of the calls made during the build and the reasoning behind them.
-
-- **Logistic Regression for syscalls, not a deep model.** The CHIDS feature vector is small (125 features) and the dataset is modest. A linear model trained in seconds, generalised well on the validation split, and produced interpretable coefficients suitable for the dissertation discussion.
-- **Random Forest for network, not gradient boosting.** Bot-IoT has well-known class imbalance and noisy features. Random Forest tolerated both without much tuning. XGBoost was benchmarked and offered ~1% F1 improvement, not enough to justify the dependency.
-- **Deterministic fusion, not a meta-classifier.** Stacking a third model on top of two probability streams adds opacity and risks overfitting the validation set. A two-line rule is auditable and behaves predictably under partial input.
-- **sysdig over Falco.** Falco is a higher-level abstraction on top of similar kernel hooks. sysdig gave direct event traces, which were easier to align with the CHIDS schema.
-- **Late fusion, not early fusion.** Concatenating raw features from two domains would have required a unified schema and a single model. Late fusion lets each modality use its own representation and classifier.
-- **Explicit synthetic-fallback flag.** The runtime extractor refuses to fabricate features silently. If the live capture file is missing or empty, the script exits non-zero unless `--allow-synthetic-fallback` is explicitly passed. This makes it impossible for a demo run to be mistaken for a live capture in the project artefacts.
-- **`run_id`-based pairing.** Syscall and network captures are paired by a shared `run_id` written into every feature and prediction CSV, not by row position. The fusion stage refuses to operate on disjoint or unlabelled inputs.
-
----
-
 ## What I would improve
 
 Written before viva. The grader picked up most of these.
@@ -272,7 +230,7 @@ Written before viva. The grader picked up most of these.
 
 ## Project timeline
 
-The repository has a single commit because the dissertation submission process required a clean upload. The work itself ran across the full final year. Phases below.
+The project ran across the full final year. Phases below.
 
 | Phase               | Period            | Milestones                                                                  |
 | ------------------- | ----------------- | --------------------------------------------------------------------------- |
