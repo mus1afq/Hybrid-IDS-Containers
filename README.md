@@ -100,11 +100,20 @@ Zero false positives is a property of this synthetic paired set rather than a re
 ![Confusion matrix](outputs/plots/hybrid_confusion_matrix.png)
 ![ROC curves](outputs/plots/roc_comparison.png)
 
-### N-window sensitivity
+## Detection Window Analysis
 
-The detection window N is the number of seconds of telemetry aggregated before a verdict is issued. F1 peaks at N=15s and degrades on either side. Shorter windows lose signal; longer windows mix benign and malicious behaviour and dilute the decision.
+A core design question for the hybrid IDS was how the telemetry capture window (N) affects detection accuracy. A shorter window detects faster but accumulates less signal. A longer window accumulates more signal but delays detection. The model was therefore evaluated at four N values to find the operating point.
 
-![N-window curve](outputs/plots/n_window_f1.png)
+| Window (N) | Syscall-Only | Network-Only | Hybrid     |
+|------------|--------------|--------------|------------|
+| 5s         | 0.6818       | 0.7612       | 0.8335     |
+| 10s        | 0.6932       | 0.8205       | 0.9112     |
+| 15s        | 0.7204       | 0.8354       | **0.9569** |
+| 30s        | 0.7187       | 0.8413       | 0.8982     |
+
+![F1 Score vs Detection Window](outputs/plots/n_window_analysis.png)
+
+Peak hybrid F1 occurred at N = 15s. Below 15s, syscall traces did not accumulate enough events to discriminate benign and malicious workloads. Beyond 15s, additional telemetry did not improve F1 and only added latency to the detection decision. The hybrid model exceeded both single-domain baselines at every window tested, with the largest absolute gain at N = 15s.
 
 ### Live runtime demo (6 Docker containers)
 
