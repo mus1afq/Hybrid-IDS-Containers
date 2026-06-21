@@ -294,8 +294,8 @@ Full reference list in the dissertation appendix.
 
 **Mustafa Sheikh** (`mshk`) — BSc (Hons) Cybersecurity, First Class, Birmingham City University, 2026.
 
-- Portfolio: [mustafashk.com](https://mustafashk.com)
-- Email: <Mustafaashk@yahoo.com>
+- Portfolio: [mshk.dev](https://mshk.dev)
+- Email: <contact@mshk.dev>
 - LinkedIn: [Mustafa Sheikh](https://uk.linkedin.com/in/mustafa-sheikh-357715341)
 
 ---
